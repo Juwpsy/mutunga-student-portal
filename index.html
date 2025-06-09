@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Student Portal</title>
+  <style>
+    :root {
+      --primary: #00f9ff;
+      --secondary: #a259ff;
+      --dark: #0d1117;
+      --card: #161b22;
+      --text: #e6edf3;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #000428, #004e92);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      min-height: 100vh;
+      animation: fadeIn 1s ease-out;
+    }
+
+    .card {
+      background: var(--card);
+      padding: 2.5rem;
+      border-radius: 16px;
+      box-shadow: 0 0 25px rgba(0, 255, 255, 0.1);
+      width: 380px;
+      text-align: center;
+      animation: slideUp 0.8s ease-out;
+    }
+
+    h2 {
+      color: var(--primary);
+      margin-bottom: 1rem;
+      font-size: 1.8rem;
+    }
+
+    input {
+      padding: 0.8rem;
+      width: 100%;
+      border-radius: 10px;
+      border: none;
+      background-color: #1f2630;
+      color: var(--text);
+      font-size: 1rem;
+      margin-top: 1rem;
+    }
+
+    button {
+      padding: 0.8rem;
+      width: 100%;
+      background: linear-gradient(to right, var(--secondary), var(--primary));
+      color: #000;
+      font-weight: bold;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      margin-top: 1.5rem;
+      transition: transform 0.2s;
+    }
+
+    button:hover {
+      transform: scale(1.03);
+    }
+
+    .link {
+      margin-top: 1rem;
+      display: inline-block;
+      font-size: 0.9rem;
+      color: var(--primary);
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    .error {
+      color: #ff5c5c;
+      font-size: 0.85rem;
+      margin-top: 0.8rem;
+    }
+
+    .success {
+      color: #00ff99;
+      font-size: 0.85rem;
+      margin-top: 0.8rem;
+    }
+
+    .report {
+      background: var(--card);
+      margin-top: 2rem;
+      padding: 2rem;
+      border-radius: 16px;
+      max-width: 700px;
+      width: 90%;
+      animation: fadeIn 0.8s ease-out;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+
+    th, td {
+      padding: 0.8rem;
+      text-align: center;
+      border-bottom: 1px solid #2d2d2d;
+    }
+
+    th {
+      color: var(--primary);
+    }
+
+    h3 {
+      margin-top: 1.2rem;
+      color: var(--secondary);
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Login -->
+  <div class="card" id="loginCard">
+    <h2>Student Login</h2>
+    <input type="text" id="studentId" placeholder="Student ID" />
+    <input type="password" id="password" placeholder="Password" />
+    <button onclick="login()">Login</button>
+    <div class="link" onclick="showReset()">Forgot Password?</div>
+    <div class="error" id="errorMsg"></div>
+  </div>
+
+  <!-- Step 1: Request Code -->
+  <div class="card" id="resetCard" style="display: none;">
+    <h2>Request Reset Code</h2>
+    <input type="text" id="resetId" placeholder="Student ID" />
+    <button onclick="sendCode()">Send Code</button>
+    <div class="link" onclick="backToLogin()">← Back</div>
+    <div class="error" id="resetMsg"></div>
+    <div class="success" id="codeSuccess"></div>
+  </div>
+
+  <!-- Step 2: Enter Code & New Password -->
+  <div class="card" id="codeCard" style="display: none;">
+    <h2>Enter Code</h2>
+    <input type="text" id="codeInput" placeholder="Verification Code" />
+    <input type="password" id="newPassword" placeholder="New Password" />
+    <button onclick="resetWithCode()">Reset Password</button>
+    <div class="link" onclick="backToReset()">← Back</div>
+    <div class="error" id="codeMsg"></div>
+    <div class="success" id="codeDone"></div>
+  </div>
+
+  <!-- Report -->
+  <div class="report" id="reportCard" style="display: none;"></div>
+
+  <script>
+    const webAppUrl = 'https://script.google.com/macros/s/AKfycby9Jqls6A6SPProXFLt72a_69h7DUf8e29kNWd1d_ciniX5PXR0GiZng_TQiHGKYJ0jpA/exec'; // Replace with your script URL
+
+    function login() {
+      const id = document.getElementById("studentId").value.trim();
+      const pass = document.getElementById("password").value.trim();
+      const err = document.getElementById("errorMsg");
+      if (!id || !pass) {
+        err.textContent = "Please fill in both fields.";
+        return;
+      }
+
+      fetch(`${webAppUrl}?action=login&id=${id}&password=${pass}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.error) {
+            err.textContent = "Incorrect ID or password.";
+          } else {
+            err.textContent = "";
+            document.getElementById("loginCard").style.display = "none";
+            const report = document.getElementById("reportCard");
+            let html = `<h2 align="center">${data.name}</h2>`;
+            html += `<h3 align="center">COURSE: ${data.course}</h3>`;
+            html += `<table><tr><th>Unit</th><th>Mark</th><th>Grade</th></tr>`;
+            data.units.forEach((u, index) => {
+              html += `<tr><td style="text-align: left;">${index + 1}. ${u.unit}</td><td>${u.mark}</td><td>${u.grade}</td></tr>`;
+            });
+            html += `</table>`;
+            html += `<h3>Average Mark: ${data.average}</h3>`;
+            html += `<h3>Average Grade: ${data.averageGrade}</h3>`;
+            html += `<button onclick="logout()">Log Out</button>`;
+            report.innerHTML = html;
+            report.style.display = "block";
+          }
+        })
+        .catch(() => {
+          err.textContent = "Server error.";
+        });
+    }
+
+    function showReset() {
+      document.getElementById("loginCard").style.display = "none";
+      document.getElementById("resetCard").style.display = "block";
+    }
+
+    function backToLogin() {
+      document.getElementById("resetCard").style.display = "none";
+      document.getElementById("codeCard").style.display = "none";
+      document.getElementById("loginCard").style.display = "block";
+      document.getElementById("resetMsg").textContent = "";
+      document.getElementById("codeSuccess").textContent = "";
+    }
+
+    function sendCode() {
+      const id = document.getElementById("resetId").value.trim();
+      const msg = document.getElementById("resetMsg");
+      const success = document.getElementById("codeSuccess");
+
+      msg.textContent = "";
+      success.textContent = "";
+
+      if (!id) {
+        msg.textContent = "Enter your ID.";
+        return;
+      }
+
+      fetch(`${webAppUrl}?action=sendCode&id=${id}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            document.getElementById("resetCard").style.display = "none";
+            document.getElementById("codeCard").style.display = "block";
+          } else {
+            msg.textContent = "ID not found.";
+          }
+        })
+        .catch(() => {
+          msg.textContent = "Network error.";
+        });
+    }
+
+    function backToReset() {
+      document.getElementById("codeCard").style.display = "none";
+      document.getElementById("resetCard").style.display = "block";
+      document.getElementById("codeMsg").textContent = "";
+      document.getElementById("codeDone").textContent = "";
+    }
+
+    function resetWithCode() {
+      const id = document.getElementById("resetId").value.trim(); // Use same ID
+      const code = document.getElementById("codeInput").value.trim();
+      const newPass = document.getElementById("newPassword").value.trim();
+      const msg = document.getElementById("codeMsg");
+      const done = document.getElementById("codeDone");
+
+      msg.textContent = "";
+      done.textContent = "";
+
+      if (!id || !code || !newPass) {
+        msg.textContent = "Fill all fields.";
+        return;
+      }
+
+      fetch(`${webAppUrl}?action=resetWithCode&id=${id}&code=${code}&newPassword=${newPass}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            done.textContent = "Password updated! You may now log in.";
+          } else {
+            msg.textContent = data.error === "Invalid code" ? "Incorrect code." : "ID not found.";
+          }
+        })
+        .catch(() => {
+          msg.textContent = "Network error.";
+        });
+    }
+
+    function logout() {
+      document.getElementById("reportCard").style.display = "none";
+      document.getElementById("studentId").value = '';
+      document.getElementById("password").value = '';
+      document.getElementById("loginCard").style.display = "block";
+    }
+  </script>
+</body>
+</html>
